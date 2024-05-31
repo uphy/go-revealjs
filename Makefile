@@ -1,0 +1,11 @@
+.PHONY: demo
+demo:
+	@cd cmd/revealgo && go run main.go --dir ../../data init demo --overwrite
+
+.PHONY: start
+start:
+	@cd cmd/revealgo && go run main.go --dir ../../data start
+
+.PHONY: build
+build:
+	@cd cmd/revealgo && go run main.go --dir ../../data build --output ../../data/build
