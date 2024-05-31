@@ -4,7 +4,7 @@ demo:
 
 .PHONY: start
 start:
-	@cd cmd/revealgo && go run main.go --dir ../../data start
+	@cd cmd/revealgo && go run main.go --dir ../../data start || true
 
 .PHONY: build
 build:

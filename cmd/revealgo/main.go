@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/uphy/go-revealjs"
 	"github.com/urfave/cli"
@@ -68,8 +69,9 @@ func main() {
 				}
 
 				signalc := make(chan os.Signal, 1)
-				signal.Notify(signalc, os.Interrupt)
+				signal.Notify(signalc, os.Interrupt, syscall.SIGTERM)
 				<-signalc
+				os.Exit(0)
 				return nil
 			},
 		},
