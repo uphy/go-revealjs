@@ -14,6 +14,8 @@ import (
 
 func main() {
 	app := cli.NewApp()
+	app.Usage = "presentation slide generator using reveal.js"
+	app.Description = "revealgo is a cli tool to generate the presentation slide using reveal.js."
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "dir,d",
@@ -75,7 +77,8 @@ func main() {
 			},
 		},
 		{
-			Name: "build",
+			Name:  "build",
+			Usage: "Generate static slide files",
 			Action: func(ctx *cli.Context) error {
 				server.EmbedHTML = true
 				server.EmbedMarkdown = true

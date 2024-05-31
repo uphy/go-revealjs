@@ -22,6 +22,7 @@ type RevealJS struct {
 	indexTemplate string
 	EmbedHTML     bool
 	EmbedMarkdown bool
+	fs            fs.FS
 }
 
 func NewRevealJS(dataDirectory string) (*RevealJS, error) {
@@ -33,7 +34,8 @@ func NewRevealJS(dataDirectory string) (*RevealJS, error) {
 		return nil, errors.New("`dir` not exist")
 	}
 	indexTemplate := filepath.Join(absDataDir, "index.html.tmpl")
-	return &RevealJS{nil, absDataDir, indexTemplate, true, false}, nil
+	mfs := NewMergeFS(os.DirFS(absDataDir), revealjsFS())
+	return &RevealJS{nil, absDataDir, indexTemplate, true, false, mfs}, nil
 }
 
 func (r *RevealJS) reloadConfig() error {
@@ -89,16 +91,7 @@ func (r *RevealJS) Start() error {
 				return
 			}
 
-			// Host user data files
-			// TODO user dataとreveal.jsのファイルが重複する場合の処理 (/data以下でホストするとか。外部mdを読み込むケースのパス指定方法変更も必要)
-			dataFile := filepath.Join(r.dataDirectory, req.URL.Path)
-			if exist(dataFile) {
-				http.ServeFile(w, req, dataFile)
-				return
-			}
-
-			// Fallback to reveal.js files
-			http.ServeFileFS(w, req, revealjsFS(), req.URL.Path)
+			http.ServeFileFS(w, req, r.fs, req.URL.Path)
 		})
 		log.Println("Start server on http://localhost:8080")
 		err := http.ListenAndServe(":8080", nil)
@@ -260,17 +253,8 @@ func (r *RevealJS) Build() error {
 	}
 	defer f.Close()
 
-	// copy embed files
-	for _, src := range []string{"dist", "css", "plugin"} {
-		if err := extractFile(revealjsFS(), src, filepath.Join(dst, src), func(path string) bool {
-			return false
-		}); err != nil {
-			return err
-		}
-	}
-
-	// copy user files
-	if err := extractFile(os.DirFS(r.dataDirectory), ".", dst, func(path string) bool {
+	// copy fs files
+	return extractFile(r.fs, ".", dst, func(path string) bool {
 		// Skip paths under dst directory
 		absSrc := filepath.Join(r.dataDirectory, path)
 		if strings.HasPrefix(absSrc, dst) {
@@ -284,11 +268,7 @@ func (r *RevealJS) Build() error {
 		}
 
 		return false
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 // extractFile copies files from src to dst.

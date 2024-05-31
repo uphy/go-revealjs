@@ -9,3 +9,7 @@ start:
 .PHONY: build
 build:
 	@cd cmd/revealgo && go run main.go --dir ../../data build
+
+.PHONY: install
+install:
+	@cd cmd/revealgo && go install
