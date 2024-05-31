@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -77,21 +76,10 @@ func main() {
 		},
 		{
 			Name: "build",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name: "output,o",
-				},
-			},
 			Action: func(ctx *cli.Context) error {
-				var output string
-				if ctx.IsSet("output") {
-					output = ctx.String("output")
-				} else {
-					output = filepath.Join(server.DataDirectory(), "build")
-				}
 				server.EmbedHTML = true
 				server.EmbedMarkdown = true
-				return server.Build(output)
+				return server.Build()
 			},
 		},
 	}

@@ -9,6 +9,9 @@ theme: black
 # Title of the index.html page.
 title: reveal.js
 
+# Destination directory for the generated presentation relative to the data directory
+buildDir: build
+
 revealjs:
   # Display presentation control arrows
   controls: true

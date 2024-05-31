@@ -125,7 +125,8 @@ func (r *RevealJS) generateIndexHTML(w io.Writer, params *HTMLGeneratorParams) e
 		hotReloadScript = `<script>
 const revision = "__REVISION__";
 async function reloadCheck() {
-	const response = await fetch(window.location.href + "/revision");
+	const baseUrl = window.location.href.split("/").slice(0, 3).join("/");
+	const response = await fetch(baseUrl + "/revision");
 	const newRevision = await response.text();
 	if (revision !== newRevision) {
 		window.location.reload();
@@ -154,8 +155,20 @@ setInterval(function() {
 func (r *RevealJS) generateSections() []string {
 	sections := make([]string, 0)
 	if r.config.Slides == nil || len(r.config.Slides) == 0 {
-		if err := filepath.Walk(r.dataDirectory, func(path string, info os.FileInfo, err error) error {
-			p, _ := filepath.Rel(r.dataDirectory, path)
+		absDataDir, err := filepath.Abs(r.dataDirectory)
+		if err != nil {
+			log.Fatal("failed to get absolute path of data directory: ", err)
+		}
+		absBuildDirectory, err := filepath.Abs(filepath.Join(r.dataDirectory, r.config.BuildDirectory))
+		if err != nil {
+			log.Fatal("failed to get absolute path of build directory: ", err)
+		}
+		if err := filepath.Walk(absDataDir, func(path string, info os.FileInfo, err error) error {
+			if strings.HasPrefix(path, absBuildDirectory) {
+				return nil
+			}
+
+			p, _ := filepath.Rel(absDataDir, path)
 			section := r.sectionFor(p)
 			if len(section) > 0 {
 				sections = append(sections, section)
@@ -209,7 +222,11 @@ func (r *RevealJS) DataDirectory() string {
 	return r.dataDirectory
 }
 
-func (r *RevealJS) Build(dst string) error {
+func (r *RevealJS) Build() error {
+	if err := r.reloadConfig(); err != nil {
+		return err
+	}
+	dst := filepath.Join(r.dataDirectory, r.config.BuildDirectory)
 	if err := r.reloadConfig(); err != nil {
 		return err
 	}

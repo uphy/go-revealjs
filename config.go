@@ -12,10 +12,11 @@ import (
 )
 
 type Config struct {
-	Slides   []string               `json:"slides"`
-	Title    string                 `json:"title"`
-	Theme    string                 `json:"theme"`
-	RevealJS map[string]interface{} `json:"revealjs"`
+	Slides         []string               `json:"slides"`
+	Title          string                 `json:"title"`
+	Theme          string                 `json:"theme"`
+	BuildDirectory string                 `json:"buildDir"`
+	RevealJS       map[string]interface{} `json:"revealjs"`
 }
 
 func LoadConfigFile(file string) (*Config, error) {
