@@ -24,11 +24,6 @@ type RevealJS struct {
 	EmbedMarkdown bool
 }
 
-const (
-	dataDirectoryName = "data"
-	markdownSection   = `<section data-markdown="%s" data-separator="^\r?\n---\r?\n$" data-separator-vertical="^\r?\n~~~\r?\n$"></section>`
-)
-
 func NewRevealJS(dataDirectory string) (*RevealJS, error) {
 	if !exist(dataDirectory) {
 		return nil, errors.New("`dir` not exist")
@@ -54,15 +49,35 @@ func (r *RevealJS) reloadConfig() error {
 }
 
 func (r *RevealJS) Start() error {
-	r.Reconfigure()
+	if err := r.reloadConfig(); err != nil {
+		return err
+	}
+
+	watcher, err := NewWatcher(r)
+	if err != nil {
+		return err
+	}
 	// TODO 終了処理いらないっけ？
 	go func() {
+		http.HandleFunc("/revision", func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Set("Content-Type", "text/plain")
+			w.Write([]byte(watcher.Revision.Value))
+		})
+
 		http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 			// Is index.html
 			if req.URL.Path == "/" {
+				// User may change config.yml. Reload it.
+				if err := r.reloadConfig(); err != nil {
+					http.Error(w, "failed to reload config.yml", http.StatusInternalServerError)
+					return
+				}
 				// Generate index.html
 				buf := &bytes.Buffer{}
-				if err := r.generateIndexHTML(buf); err != nil {
+				if err := r.generateIndexHTML(buf, &HTMLGeneratorParams{
+					HotReload: true,
+					Revision:  &watcher.Revision.Value,
+				}); err != nil {
 					http.Error(w, "failed to generate index.html", http.StatusInternalServerError)
 					return
 				}
@@ -87,21 +102,16 @@ func (r *RevealJS) Start() error {
 			log.Fatal("Failed to start server: ", err)
 		}
 	}()
-	watcher, err := NewWatcher(r)
-	if err != nil {
-		return err
-	}
 	go watcher.Start()
 	return nil
 }
 
-func (r *RevealJS) Reconfigure() {
-	if err := r.reloadConfig(); err != nil {
-		log.Println("failed to reload config.yml: ", err)
-	}
+type HTMLGeneratorParams struct {
+	HotReload bool
+	Revision  *string
 }
 
-func (r *RevealJS) generateIndexHTML(w io.Writer) error {
+func (r *RevealJS) generateIndexHTML(w io.Writer, params *HTMLGeneratorParams) error {
 	b, err := os.ReadFile(r.indexTemplate)
 	if err != nil {
 		return err
@@ -110,9 +120,31 @@ func (r *RevealJS) generateIndexHTML(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+	var hotReloadScript string
+	if params.HotReload {
+		hotReloadScript = `<script>
+const revision = "__REVISION__";
+async function reloadCheck() {
+	const response = await fetch(window.location.href + "/revision");
+	const newRevision = await response.text();
+	if (revision !== newRevision) {
+		window.location.reload();
+	}
+}
+setInterval(function() {
+		reloadCheck().catch(console.error);
+}, 1000);
+</script>`
+		if params.Revision != nil {
+			hotReloadScript = strings.ReplaceAll(hotReloadScript, "__REVISION__", *params.Revision)
+		}
+	} else {
+		hotReloadScript = ""
+	}
 	if err := tmpl.Execute(w, map[string]interface{}{
-		"config":   r.config,
-		"sections": r.generateSections(),
+		"config":          r.config,
+		"sections":        r.generateSections(),
+		"hotReloadScript": hotReloadScript,
 	}); err != nil {
 		return err
 	}
@@ -173,16 +205,14 @@ func (r *RevealJS) sectionFor(relPathFromDataDirectory string) string {
 	}
 }
 
-func (r *RevealJS) UpdateSlideFile(file string) {
-	r.Reconfigure()
-}
-
 func (r *RevealJS) DataDirectory() string {
 	return r.dataDirectory
 }
 
 func (r *RevealJS) Build(dst string) error {
-	r.Reconfigure()
+	if err := r.reloadConfig(); err != nil {
+		return err
+	}
 
 	// Make 'build' directory if not exist
 	if err := os.MkdirAll(dst, 0700); err != nil {
@@ -204,7 +234,10 @@ func (r *RevealJS) Build(dst string) error {
 	if err != nil {
 		return err
 	}
-	if err := r.generateIndexHTML(f); err != nil {
+	if err := r.generateIndexHTML(f, &HTMLGeneratorParams{
+		HotReload: false,
+		Revision:  nil,
+	}); err != nil {
 		return err
 	}
 	defer f.Close()

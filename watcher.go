@@ -1,9 +1,10 @@
 package revealjs
 
 import (
+	"log"
 	"os"
 	"path/filepath"
-	"strings"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -11,6 +12,15 @@ import (
 type Watcher struct {
 	watcher  *fsnotify.Watcher
 	revealjs *RevealJS
+	Revision *Revision
+}
+
+type Revision struct {
+	Value string
+}
+
+func (r *Revision) update() {
+	r.Value = time.Now().String()
 }
 
 func NewWatcher(revealjs *RevealJS) (*Watcher, error) {
@@ -18,7 +28,9 @@ func NewWatcher(revealjs *RevealJS) (*Watcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Watcher{w, revealjs}, err
+	rev := &Revision{}
+	rev.update()
+	return &Watcher{w, revealjs, rev}, err
 }
 
 func (w *Watcher) Start() {
@@ -35,18 +47,18 @@ func (w *Watcher) Start() {
 		if op&fsnotify.Create != 0 {
 			if s, err := os.Stat(evt.Name); !os.IsNotExist(err) && s.IsDir() {
 				w.watcher.Add(evt.Name)
-			} else {
-				w.revealjs.Reconfigure()
 			}
+			w.notifyUpdate()
 		} else if op&fsnotify.Remove != 0 {
 			w.watcher.Remove(evt.Name)
-			w.revealjs.Reconfigure()
+			w.notifyUpdate()
 		} else if op&fsnotify.Write != 0 {
-			if _, file := filepath.Split(evt.Name); file == "config.yml" || strings.HasSuffix(file, ".tmpl") {
-				w.revealjs.Reconfigure()
-			} else {
-				w.revealjs.UpdateSlideFile(evt.Name)
-			}
+			w.notifyUpdate()
 		}
 	}
+}
+
+func (w *Watcher) notifyUpdate() {
+	log.Println("Data directory updated.")
+	w.Revision.update()
 }
