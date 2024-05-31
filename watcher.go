@@ -41,7 +41,6 @@ func (w *Watcher) Start() {
 		}
 		return nil
 	})
-	w.watcher.Add(w.revealjs.indexTemplate)
 	for evt := range w.watcher.Events {
 		op := evt.Op
 		if op&fsnotify.Create != 0 {

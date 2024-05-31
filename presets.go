@@ -6,11 +6,19 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/uphy/go-revealjs/vfs"
 )
 
 // Preset is a collection of files that are used to generate an initial Reveal.js presentation.
 type Preset struct {
 	fs fs.FS
+}
+
+type GenerateOptions struct {
+	Force                bool
+	GenerateConfig       bool
+	GenerateHTMLTemplate bool
 }
 
 func NewDefaultPreset() *Preset {
@@ -19,30 +27,28 @@ func NewDefaultPreset() *Preset {
 }
 
 func NewPreset(name string) (*Preset, error) {
-	sub, err := presetFS(name)
+	preset, err := presetFS(name)
 	if err != nil {
 		return nil, err
 	}
-	return &Preset{sub}, nil
+	mfs := vfs.NewMergeFS(preset, indexHTMLTmplFS(), configYamlFS())
+	return &Preset{mfs}, nil
 }
 
-func (f *Preset) Generate(dest string, force bool) error {
+func (f *Preset) Generate(dest string, options *GenerateOptions) error {
 	// Create 'dest' directory if not exist
 	if err := os.MkdirAll(dest, 0700); err != nil {
 		return err
 	}
-	if err := f.extractAll(dest, force); err != nil {
-		return err
-	}
-	if err := extract(indexHTMLTmplFS(), "index.html.tmpl", filepath.Join(dest, "index.html.tmpl")); err != nil {
+	if err := f.extractAll(dest, options); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (f *Preset) extractAll(destDir string, force bool) error {
+func (f *Preset) extractAll(destDir string, options *GenerateOptions) error {
 	// Clean destDir if force==true
-	if force {
+	if options.Force {
 		if exist(destDir) {
 			files, err := os.ReadDir(destDir)
 			if err != nil {
@@ -57,6 +63,12 @@ func (f *Preset) extractAll(destDir string, force bool) error {
 	}
 	return fs.WalkDir(f.fs, ".", func(path string, d fs.DirEntry, err error) error {
 		if path == "." {
+			return nil
+		}
+		if path == "index.html.tmpl" && !options.GenerateHTMLTemplate {
+			return nil
+		}
+		if path == "config.yml" && !options.GenerateConfig {
 			return nil
 		}
 		dest := filepath.Join(destDir, path)

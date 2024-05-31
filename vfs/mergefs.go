@@ -1,4 +1,4 @@
-package revealjs
+package vfs
 
 import (
 	"io/fs"

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -19,14 +20,41 @@ type Config struct {
 	RevealJS       map[string]interface{} `json:"revealjs"`
 }
 
-func LoadConfigFile(file string) (*Config, error) {
-	f, err := os.Open(file)
+func LoadConfigFile(reader io.Reader) (*Config, error) {
+	c, err := doLoadConfigFile(reader)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+
+	// Derive from default config
+	defaultConfigFile, err := configYamlFS().Open("config.yml")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defaultConfig, err := doLoadConfigFile(defaultConfigFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if c.Title == "" {
+		c.Title = defaultConfig.Title
+	}
+	if c.Theme == "" {
+		c.Theme = defaultConfig.Theme
+	}
+	if c.BuildDirectory == "" {
+		c.BuildDirectory = defaultConfig.BuildDirectory
+	}
+	mergedRevealJS := defaultConfig.RevealJS
+	for k, v := range c.RevealJS {
+		mergedRevealJS[k] = v
+	}
+	c.RevealJS = mergedRevealJS
+	return c, nil
+}
+
+func doLoadConfigFile(reader io.Reader) (*Config, error) {
 	var c Config
-	b, err := io.ReadAll(f)
+	b, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}

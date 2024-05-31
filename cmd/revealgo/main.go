@@ -45,6 +45,12 @@ func main() {
 				cli.BoolFlag{
 					Name: "overwrite,o",
 				},
+				cli.BoolFlag{
+					Name: "config,c",
+				},
+				cli.BoolFlag{
+					Name: "html,t",
+				},
 			},
 			ArgsUsage: fmt.Sprintf("[%s]", strings.Join(revealjs.PresetNames, "|")),
 			Action: func(ctx *cli.Context) error {
@@ -58,7 +64,11 @@ func main() {
 				if err != nil {
 					return err
 				}
-				return fs.Generate(server.DataDirectory(), ctx.Bool("overwrite"))
+				return fs.Generate(server.DataDirectory(), &revealjs.GenerateOptions{
+					Force:                ctx.Bool("overwrite"),
+					GenerateConfig:       ctx.Bool("config"),
+					GenerateHTMLTemplate: ctx.Bool("html"),
+				})
 			},
 		},
 		{

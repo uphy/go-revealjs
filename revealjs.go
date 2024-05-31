@@ -14,12 +14,13 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/uphy/go-revealjs/vfs"
 )
 
 type RevealJS struct {
 	config        *Config
 	dataDirectory string
-	indexTemplate string
 	EmbedHTML     bool
 	EmbedMarkdown bool
 	fs            fs.FS
@@ -33,20 +34,17 @@ func NewRevealJS(dataDirectory string) (*RevealJS, error) {
 	if !exist(absDataDir) {
 		return nil, errors.New("`dir` not exist")
 	}
-	indexTemplate := filepath.Join(absDataDir, "index.html.tmpl")
-	mfs := NewMergeFS(os.DirFS(absDataDir), revealjsFS())
-	return &RevealJS{nil, absDataDir, indexTemplate, true, false, mfs}, nil
+	mfs := vfs.NewMergeFS(os.DirFS(absDataDir), indexHTMLTmplFS(), configYamlFS(), revealjsFS())
+	return &RevealJS{nil, absDataDir, true, false, mfs}, nil
 }
 
 func (r *RevealJS) reloadConfig() error {
-	configFile := filepath.Join(r.dataDirectory, "config.yml")
-	if !exist(configFile) {
-		fs := NewDefaultPreset()
-		if err := fs.Generate(r.dataDirectory, false); err != nil {
-			return err
-		}
+	configFile, err := r.fs.Open("config.yml")
+	if err != nil {
+		return err
 	}
 	c, err := LoadConfigFile(configFile)
+	defer configFile.Close()
 	if err != nil {
 		return err
 	}
@@ -109,7 +107,7 @@ type HTMLGeneratorParams struct {
 }
 
 func (r *RevealJS) generateIndexHTML(w io.Writer, params *HTMLGeneratorParams) error {
-	b, err := os.ReadFile(r.indexTemplate)
+	b, err := fs.ReadFile(r.fs, "index.html.tmpl")
 	if err != nil {
 		return err
 	}
