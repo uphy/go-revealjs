@@ -12,6 +12,20 @@ title: reveal.js
 # Destination directory for the generated presentation relative to the data directory
 buildDir: build
 
+# Plugins to load.
+#
+# For built-in plugins, just specify the plugin name.
+# For third-party plugins, specify the plugin name and the URL to the plugin script.
+plugins:
+  - RevealMarkdown
+  - RevealHighlight
+  - RevealSearch
+  - RevealNotes
+  - RevealMath
+  - RevealZoom
+  - name: RevealPlantUML
+    src: https://cdn.jsdelivr.net/gh/uphy/revealjs-plantuml@0.0.2/dist/plantuml.js
+
 revealjs:
   # Display presentation control arrows
   controls: true
@@ -188,13 +202,3 @@ revealjs:
 
   # Time before the cursor is hidden (in ms)
   hideCursorTime: 5000
-
-  # Script dependencies to load
-  # https://revealjs.com/plugins/#built-in-plugins
-  plugins:
-    - RevealMarkdown
-    - RevealHighlight
-    - RevealSearch
-    - RevealNotes
-    - RevealMath
-    - RevealZoom

@@ -13,11 +13,17 @@ import (
 )
 
 type Config struct {
-	Slides         []string               `json:"slides"`
-	Title          string                 `json:"title"`
-	Theme          string                 `json:"theme"`
-	BuildDirectory string                 `json:"buildDir"`
-	RevealJS       map[string]interface{} `json:"revealjs"`
+	Slides          []string               `json:"slides"`
+	Title           string                 `json:"title"`
+	Theme           string                 `json:"theme"`
+	BuildDirectory  string                 `json:"buildDir"`
+	RevealJS        map[string]interface{} `json:"revealjs"`
+	InternalPlugins []interface{}          `json:"plugins"`
+}
+
+type Plugin struct {
+	Name string `json:"name"`
+	Src  string `json:"src"`
 }
 
 func LoadConfigFile(reader io.Reader) (*Config, error) {
@@ -44,6 +50,9 @@ func LoadConfigFile(reader io.Reader) (*Config, error) {
 	if c.BuildDirectory == "" {
 		c.BuildDirectory = defaultConfig.BuildDirectory
 	}
+	if c.InternalPlugins == nil {
+		c.InternalPlugins = defaultConfig.InternalPlugins
+	}
 	mergedRevealJS := defaultConfig.RevealJS
 	for k, v := range c.RevealJS {
 		mergedRevealJS[k] = v
@@ -62,6 +71,43 @@ func doLoadConfigFile(reader io.Reader) (*Config, error) {
 		return nil, err
 	}
 	return &c, nil
+}
+
+func (c *Config) Plugins() []Plugin {
+	plugins := []Plugin{}
+	for _, v := range c.InternalPlugins {
+		var plugin Plugin
+		if src, ok := v.(string); ok {
+			plugin = Plugin{
+				Name: src,
+				Src:  "",
+			}
+		} else {
+			plugin = Plugin{}
+			b, _ := json.Marshal(v)
+			json.Unmarshal(b, &plugin)
+		}
+		if plugin.Src == "" {
+			switch plugin.Name {
+			case "RevealHighlight":
+				plugin.Src = "plugin/highlight/highlight.js"
+			case "RevealMarkdown":
+				plugin.Src = "plugin/markdown/markdown.js"
+			case "RevealSearch":
+				plugin.Src = "plugin/search/search.js"
+			case "RevealNotes":
+				plugin.Src = "plugin/notes/notes.js"
+			case "RevealMath":
+				plugin.Src = "plugin/math/math.js"
+			case "RevealZoom":
+				plugin.Src = "plugin/zoom/zoom.js"
+			default:
+				log.Fatalf("plugin %s is not supported", plugin.Name)
+			}
+		}
+		plugins = append(plugins, plugin)
+	}
+	return plugins
 }
 
 func (c *Config) RevealJSConfig() map[string]string {
