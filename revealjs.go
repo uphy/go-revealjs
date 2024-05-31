@@ -25,11 +25,15 @@ type RevealJS struct {
 }
 
 func NewRevealJS(dataDirectory string) (*RevealJS, error) {
-	if !exist(dataDirectory) {
+	absDataDir, err := filepath.Abs(dataDirectory)
+	if err != nil {
+		return nil, err
+	}
+	if !exist(absDataDir) {
 		return nil, errors.New("`dir` not exist")
 	}
-	indexTemplate := filepath.Join(dataDirectory, "index.html.tmpl")
-	return &RevealJS{nil, dataDirectory, indexTemplate, true, false}, nil
+	indexTemplate := filepath.Join(absDataDir, "index.html.tmpl")
+	return &RevealJS{nil, absDataDir, indexTemplate, true, false}, nil
 }
 
 func (r *RevealJS) reloadConfig() error {
@@ -155,20 +159,13 @@ setInterval(function() {
 func (r *RevealJS) generateSections() []string {
 	sections := make([]string, 0)
 	if r.config.Slides == nil || len(r.config.Slides) == 0 {
-		absDataDir, err := filepath.Abs(r.dataDirectory)
-		if err != nil {
-			log.Fatal("failed to get absolute path of data directory: ", err)
-		}
-		absBuildDirectory, err := filepath.Abs(filepath.Join(r.dataDirectory, r.config.BuildDirectory))
-		if err != nil {
-			log.Fatal("failed to get absolute path of build directory: ", err)
-		}
-		if err := filepath.Walk(absDataDir, func(path string, info os.FileInfo, err error) error {
-			if strings.HasPrefix(path, absBuildDirectory) {
+		buildDir := r.BuildDirectory()
+		if err := filepath.Walk(r.dataDirectory, func(path string, info os.FileInfo, err error) error {
+			if strings.HasPrefix(path, buildDir) {
 				return nil
 			}
 
-			p, _ := filepath.Rel(absDataDir, path)
+			p, _ := filepath.Rel(r.dataDirectory, path)
 			section := r.sectionFor(p)
 			if len(section) > 0 {
 				sections = append(sections, section)
@@ -222,11 +219,15 @@ func (r *RevealJS) DataDirectory() string {
 	return r.dataDirectory
 }
 
+func (r *RevealJS) BuildDirectory() string {
+	return filepath.Join(r.dataDirectory, r.config.BuildDirectory)
+}
+
 func (r *RevealJS) Build() error {
 	if err := r.reloadConfig(); err != nil {
 		return err
 	}
-	dst := filepath.Join(r.dataDirectory, r.config.BuildDirectory)
+	dst := r.BuildDirectory()
 	if err := r.reloadConfig(); err != nil {
 		return err
 	}
@@ -269,18 +270,10 @@ func (r *RevealJS) Build() error {
 	}
 
 	// copy user files
-	absDst, err := filepath.Abs(dst)
-	if err != nil {
-		return err
-	}
-	absDataDir, err := filepath.Abs(r.dataDirectory)
-	if err != nil {
-		return err
-	}
-	if err := extractFile(os.DirFS(absDataDir), ".", dst, func(path string) bool {
+	if err := extractFile(os.DirFS(r.dataDirectory), ".", dst, func(path string) bool {
 		// Skip paths under dst directory
-		absSrc := filepath.Join(absDataDir, path)
-		if strings.HasPrefix(absSrc, absDst) {
+		absSrc := filepath.Join(r.dataDirectory, path)
+		if strings.HasPrefix(absSrc, dst) {
 			return true
 		}
 
