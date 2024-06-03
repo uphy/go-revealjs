@@ -1,4 +1,4 @@
-package main // import "github.com/uphy/revealjs-docker/bootstrap"
+package main
 
 import (
 	"errors"
@@ -15,7 +15,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Usage = "presentation slide generator using reveal.js"
-	app.Description = "revealgo is a cli tool to generate the presentation slide using reveal.js."
+	app.Description = "revealcli is a cli tool to generate the presentation slide using reveal.js."
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "dir,d",
