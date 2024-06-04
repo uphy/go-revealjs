@@ -12,8 +12,11 @@ import (
 	"github.com/urfave/cli"
 )
 
+var version string = "dev"
+
 func main() {
 	app := cli.NewApp()
+	app.Version = version
 	app.Usage = "presentation slide generator using reveal.js"
 	app.Description = "revealcli is a cli tool to generate the presentation slide using reveal.js."
 	app.Flags = []cli.Flag{

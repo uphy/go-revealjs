@@ -1,0 +1,39 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ["ubuntu-latest"]
+    permissions:
+      # Release作成のため
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+    
+      - name: Create github app token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+            app-id: ${{ secrets.UPHY_OPS_APP_ID }}
+            private-key: ${{ secrets.UPHY_OPS_PRIVATE_KEY }}
+            owner: ${{ github.repository_owner }}
+            repositories: go-revealjs,homebrew-tap
+
+      - uses: goreleaser/goreleaser-action@v5
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}

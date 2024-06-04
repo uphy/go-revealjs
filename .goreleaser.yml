@@ -1,0 +1,48 @@
+project_name: revealcli
+
+builds:
+  - id: default
+    binary: revealcli
+    main: cmd/revealcli/main.go
+    ldflags:
+      - -X github.com/uphy/go-revealjs/cmd/revealcli.version={{.Version}}
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+
+archives:
+  - id: default
+    format: tar.gz
+    wrap_in_directory: true
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: '{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    files:
+      - LICENSE
+
+snapshot:
+  name_template: SNAPSHOT-{{ .Commit }}
+
+release:
+  github:
+    owner: uphy
+    name: go-revealjs
+
+brews:
+  - repository:
+      owner: uphy
+      name: homebrew-tap
+      branch: main
+    directory: Formula
+    name: revealcli
+    homepage: "https://github.com/uphy/go-revealjs"
+    description: "CLI tool for reveal.js"
+    install: |
+      bin.install "revealcli"
