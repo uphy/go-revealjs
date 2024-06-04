@@ -5,7 +5,7 @@ builds:
     binary: revealcli
     main: cmd/revealcli/main.go
     ldflags:
-      - -X github.com/uphy/go-revealjs/cmd/revealcli.version={{.Version}}
+      - -X main.version={{.Version}}
     goos:
       - darwin
       - linux
