@@ -1,19 +1,16 @@
 package revealjs
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"html"
 	"io"
 	"io/fs"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/uphy/go-revealjs/vfs"
 )
@@ -49,55 +46,6 @@ func (r *RevealJS) ReloadConfig() error {
 		return err
 	}
 	r.config = c
-	return nil
-}
-
-func (r *RevealJS) Start() error {
-	if err := r.ReloadConfig(); err != nil {
-		return err
-	}
-
-	watcher, err := NewWatcher(r)
-	if err != nil {
-		return err
-	}
-	// TODO 終了処理いらないっけ？
-	go func() {
-		http.HandleFunc("/revision", func(w http.ResponseWriter, req *http.Request) {
-			w.Header().Set("Content-Type", "text/plain")
-			w.Write([]byte(watcher.Revision.Value))
-		})
-
-		http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-			// Is index.html
-			if req.URL.Path == "/" {
-				// User may change config.yml. Reload it.
-				if err := r.ReloadConfig(); err != nil {
-					http.Error(w, "failed to reload config.yml", http.StatusInternalServerError)
-					return
-				}
-				// Generate index.html
-				buf := &bytes.Buffer{}
-				if err := r.GenerateIndexHTML(buf, &HTMLGeneratorParams{
-					HotReload: true,
-					Revision:  &watcher.Revision.Value,
-				}); err != nil {
-					http.Error(w, "failed to generate index.html", http.StatusInternalServerError)
-					return
-				}
-				http.ServeContent(w, req, "index.html", time.Now(), bytes.NewReader(buf.Bytes()))
-				return
-			}
-
-			http.ServeFileFS(w, req, r.fs, req.URL.Path)
-		})
-		log.Println("Start server on http://localhost:8080")
-		err := http.ListenAndServe(":8080", nil)
-		if err != nil {
-			log.Fatal("Failed to start server: ", err)
-		}
-	}()
-	go watcher.Start()
 	return nil
 }
 
@@ -212,6 +160,10 @@ func (r *RevealJS) DataDirectory() string {
 
 func (r *RevealJS) BuildDirectory() string {
 	return filepath.Join(r.dataDirectory, r.config.BuildDirectory)
+}
+
+func (r *RevealJS) FileSystem() fs.FS {
+	return r.fs
 }
 
 func (r *RevealJS) Build() error {

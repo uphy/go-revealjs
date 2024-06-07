@@ -27,14 +27,14 @@ func main() {
 		},
 	}
 
-	var server *revealjs.RevealJS
+	var revealJS *revealjs.RevealJS
 	app.Before = func(ctx *cli.Context) error {
 		dir := ctx.String("dir")
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			return errors.New("`dir` not exist")
 		}
 		var err error
-		server, err = revealjs.NewRevealJS(dir)
+		revealJS, err = revealjs.NewRevealJS(dir)
 		if err != nil {
 			return fmt.Errorf("failed to initialize app: %s", err)
 		}
@@ -67,7 +67,7 @@ func main() {
 				if err != nil {
 					return err
 				}
-				return fs.Generate(server.DataDirectory(), &revealjs.GenerateOptions{
+				return fs.Generate(revealJS.DataDirectory(), &revealjs.GenerateOptions{
 					Force:                ctx.Bool("overwrite"),
 					GenerateConfig:       ctx.Bool("config"),
 					GenerateHTMLTemplate: ctx.Bool("html"),
@@ -77,7 +77,15 @@ func main() {
 		{
 			Name:  "start",
 			Usage: "Start reveal.js server",
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  "port,p",
+					Value: 8080,
+				},
+			},
 			Action: func(ctx *cli.Context) error {
+				port := ctx.Int("port")
+				server := revealjs.NewServer(port, revealJS)
 				if err := server.Start(); err != nil {
 					return fmt.Errorf("failed to start server: %s", err)
 				}
@@ -93,9 +101,9 @@ func main() {
 			Name:  "build",
 			Usage: "Generate static slide files",
 			Action: func(ctx *cli.Context) error {
-				server.EmbedHTML = true
-				server.EmbedMarkdown = true
-				return server.Build()
+				revealJS.EmbedHTML = true
+				revealJS.EmbedMarkdown = true
+				return revealJS.Build()
 			},
 		},
 	}
