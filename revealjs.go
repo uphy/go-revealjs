@@ -89,9 +89,13 @@ setInterval(function() {
 	} else {
 		hotReloadScript = ""
 	}
+	sections, err := r.generateSections()
+	if err != nil {
+		return err
+	}
 	if err := tmpl.Execute(w, map[string]interface{}{
 		"config":          r.config,
-		"sections":        r.generateSections(),
+		"sections":        sections,
 		"hotReloadScript": hotReloadScript,
 	}); err != nil {
 		return err
@@ -99,38 +103,55 @@ setInterval(function() {
 	return nil
 }
 
-func (r *RevealJS) generateSections() []string {
-	sections := make([]string, 0)
-	if r.config.Slides == nil || len(r.config.Slides) == 0 {
-		buildDir := r.BuildDirectory()
-		if err := filepath.Walk(r.dataDirectory, func(path string, info os.FileInfo, err error) error {
-			if strings.HasPrefix(path, buildDir) {
-				return nil
-			}
+func (r *RevealJS) generateSections() ([]string, error) {
+	files, err := r.collectSlideSourceFiles()
+	if err != nil {
+		return nil, err
+	}
+	return r.doGenerateSections(files), nil
+}
 
-			p, _ := filepath.Rel(r.dataDirectory, path)
-			section := r.sectionFor(p)
-			if len(section) > 0 {
-				sections = append(sections, section)
-			}
+func (r *RevealJS) collectSlideSourceFiles() ([]string, error) {
+	if r.config.Slides != nil && len(r.config.Slides) > 0 {
+		return r.config.Slides, nil
+	}
+
+	buildDir := r.BuildDirectory()
+	files := make([]string, 0)
+	if err := filepath.Walk(r.dataDirectory, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
 			return nil
-		}); err != nil {
-			log.Println("failed to walk data directory: ", err)
 		}
-	} else {
-		for _, s := range r.config.Slides {
-			section := r.sectionFor(s)
-			if len(section) > 0 {
-				sections = append(sections, section)
-			} else {
-				log.Println("unsupported slide file: ", s)
-			}
+		if strings.HasPrefix(path, buildDir) {
+			return nil
+		}
+
+		p, _ := filepath.Rel(r.dataDirectory, path)
+		if p == "config.yml" || p == ".DS_Store" {
+			return nil
+		}
+		files = append(files, p)
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("failed to scan slide source files: %w", err)
+	}
+	return files, nil
+}
+
+func (r *RevealJS) doGenerateSections(files []string) []string {
+	sections := make([]string, 0)
+	for _, file := range files {
+		section, err := r.sectionFor(file)
+		if err != nil {
+			log.Printf("failed to generate <section> tag for %s: %s", file, err)
+		} else {
+			sections = append(sections, section)
 		}
 	}
 	return sections
 }
 
-func (r *RevealJS) sectionFor(relPathFromDataDirectory string) string {
+func (r *RevealJS) sectionFor(relPathFromDataDirectory string) (string, error) {
 	path := filepath.Join(r.dataDirectory, relPathFromDataDirectory)
 
 	switch filepath.Ext(path) {
@@ -138,23 +159,22 @@ func (r *RevealJS) sectionFor(relPathFromDataDirectory string) string {
 		if r.EmbedHTML {
 			content, err := os.ReadFile(path)
 			if err != nil {
-				log.Printf("failed to load file %s: %s", path, err)
-				return ""
+				return "", fmt.Errorf("failed to load file %s: %w", path, err)
 			}
-			return string(content)
+			return string(content), nil
 		}
-		return fmt.Sprintf(`<section data-external="%s"></section>`, relPathFromDataDirectory)
+		return fmt.Sprintf(`<section data-external="%s"></section>`, relPathFromDataDirectory), nil
 	case ".md":
 		if r.EmbedMarkdown {
 			b, err := os.ReadFile(path)
 			if err != nil {
 				log.Printf("failed to read markdown file: %s", path)
 			}
-			return fmt.Sprintf(`<section data-markdown data-separator="^\r?\n---\r?\n$" data-separator-vertical="^\r?\n~~~\r?\n$">%s</section>`, html.EscapeString(string(b)))
+			return fmt.Sprintf(`<section data-markdown data-separator="^\r?\n---\r?\n$" data-separator-vertical="^\r?\n~~~\r?\n$">%s</section>`, html.EscapeString(string(b))), nil
 		}
-		return fmt.Sprintf(`<section data-markdown="%s" data-separator="^\r?\n---\r?\n$" data-separator-vertical="^\r?\n~~~\r?\n$"></section>`, relPathFromDataDirectory)
+		return fmt.Sprintf(`<section data-markdown="%s" data-separator="^\r?\n---\r?\n$" data-separator-vertical="^\r?\n~~~\r?\n$"></section>`, relPathFromDataDirectory), nil
 	default:
-		return ""
+		return "", fmt.Errorf("unsupported slide file: %s", path)
 	}
 }
 
