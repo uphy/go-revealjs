@@ -38,7 +38,7 @@ func NewRevealJS(dataDirectory string) (*RevealJS, error) {
 	return &RevealJS{nil, absDataDir, true, false, mfs}, nil
 }
 
-func (r *RevealJS) reloadConfig() error {
+func (r *RevealJS) ReloadConfig() error {
 	configFile, err := r.fs.Open("config.yml")
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (r *RevealJS) reloadConfig() error {
 }
 
 func (r *RevealJS) Start() error {
-	if err := r.reloadConfig(); err != nil {
+	if err := r.ReloadConfig(); err != nil {
 		return err
 	}
 
@@ -72,13 +72,13 @@ func (r *RevealJS) Start() error {
 			// Is index.html
 			if req.URL.Path == "/" {
 				// User may change config.yml. Reload it.
-				if err := r.reloadConfig(); err != nil {
+				if err := r.ReloadConfig(); err != nil {
 					http.Error(w, "failed to reload config.yml", http.StatusInternalServerError)
 					return
 				}
 				// Generate index.html
 				buf := &bytes.Buffer{}
-				if err := r.generateIndexHTML(buf, &HTMLGeneratorParams{
+				if err := r.GenerateIndexHTML(buf, &HTMLGeneratorParams{
 					HotReload: true,
 					Revision:  &watcher.Revision.Value,
 				}); err != nil {
@@ -106,7 +106,7 @@ type HTMLGeneratorParams struct {
 	Revision  *string
 }
 
-func (r *RevealJS) generateIndexHTML(w io.Writer, params *HTMLGeneratorParams) error {
+func (r *RevealJS) GenerateIndexHTML(w io.Writer, params *HTMLGeneratorParams) error {
 	b, err := fs.ReadFile(r.fs, "index.html.tmpl")
 	if err != nil {
 		return err
@@ -215,11 +215,11 @@ func (r *RevealJS) BuildDirectory() string {
 }
 
 func (r *RevealJS) Build() error {
-	if err := r.reloadConfig(); err != nil {
+	if err := r.ReloadConfig(); err != nil {
 		return err
 	}
 	dst := r.BuildDirectory()
-	if err := r.reloadConfig(); err != nil {
+	if err := r.ReloadConfig(); err != nil {
 		return err
 	}
 
@@ -243,7 +243,7 @@ func (r *RevealJS) Build() error {
 	if err != nil {
 		return err
 	}
-	if err := r.generateIndexHTML(f, &HTMLGeneratorParams{
+	if err := r.GenerateIndexHTML(f, &HTMLGeneratorParams{
 		HotReload: false,
 		Revision:  nil,
 	}); err != nil {
