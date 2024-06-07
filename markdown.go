@@ -1,0 +1,37 @@
+package revealjs
+
+import (
+	"path/filepath"
+	"regexp"
+
+	"github.com/ghodss/yaml"
+)
+
+var yamlHeaderRegexp = regexp.MustCompile(`(?s)^---\n(.*?)\n---\n+`)
+
+type Markdown struct {
+	content string
+}
+
+func IsMarkdown(path string) bool {
+	return filepath.Ext(path) == ".md"
+}
+
+func NewMarkdown(content string) *Markdown {
+	return &Markdown{content}
+}
+
+func (m *Markdown) WithoutYAMLHeader() string {
+	return yamlHeaderRegexp.ReplaceAllString(m.content, "")
+}
+
+func (m *Markdown) YAMLHeader() (map[string]string, error) {
+	header := make(map[string]string)
+	matches := yamlHeaderRegexp.FindStringSubmatch(m.content)
+	if len(matches) == 2 {
+		if err := yaml.Unmarshal([]byte(matches[1]), &header); err != nil {
+			return nil, err
+		}
+	}
+	return header, nil
+}

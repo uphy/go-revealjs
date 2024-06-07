@@ -1,6 +1,7 @@
 package revealjs
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"html"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/ghodss/yaml"
 	"github.com/uphy/go-revealjs/vfs"
 )
 
@@ -50,6 +52,31 @@ func (r *RevealJS) ReloadConfig() error {
 		return err
 	}
 	r.config = c
+	if files, collectErr := r.collectSlideSourceFiles(); collectErr != nil {
+		return collectErr
+	} else {
+		if len(files) == 1 && IsMarkdown(files[0]) {
+			b, err := fs.ReadFile(r.fs, files[0])
+			if err != nil {
+				return err
+			}
+			md := NewMarkdown(string(b))
+			if header, err := md.YAMLHeader(); err != nil {
+				return err
+			} else {
+				b, err := yaml.Marshal(header)
+				if err != nil {
+					return err
+				}
+				configInMd, err := doLoadConfigFile(bytes.NewReader(b))
+				if err != nil {
+					return err
+				}
+				c.OverrideWith(configInMd)
+				return nil
+			}
+		}
+	}
 	return nil
 }
 
@@ -170,7 +197,8 @@ func (r *RevealJS) sectionFor(relPathFromDataDirectory string) (string, error) {
 			if err != nil {
 				log.Printf("failed to read markdown file: %s", path)
 			}
-			return fmt.Sprintf(`<section data-markdown data-separator="^\r?\n---\r?\n$" data-separator-vertical="^\r?\n~~~\r?\n$">%s</section>`, html.EscapeString(string(b))), nil
+			md := NewMarkdown(string(b)).WithoutYAMLHeader()
+			return fmt.Sprintf(`<section data-markdown data-separator="^\r?\n---\r?\n$" data-separator-vertical="^\r?\n~~~\r?\n$">%s</section>`, html.EscapeString(md)), nil
 		}
 		return fmt.Sprintf(`<section data-markdown="%s" data-separator="^\r?\n---\r?\n$" data-separator-vertical="^\r?\n~~~\r?\n$"></section>`, relPathFromDataDirectory), nil
 	default:
@@ -256,7 +284,9 @@ func extractFile(fileSystem fs.FS, src, dst string, skip func(path string) bool)
 		if d.IsDir() {
 			return os.MkdirAll(copyDst, 0700)
 		}
-		reader, err := fileSystem.Open(path)
+
+		var reader io.ReadCloser
+		reader, err = fileSystem.Open(path)
 		if err != nil {
 			return err
 		}
@@ -268,7 +298,19 @@ func extractFile(fileSystem fs.FS, src, dst string, skip func(path string) bool)
 		}
 		defer writer.Close()
 
-		_, err = io.Copy(writer, reader)
+		if IsMarkdown(path) {
+			b, err := io.ReadAll(reader)
+			if err != nil {
+				return err
+			}
+			content := NewMarkdown(string(b)).WithoutYAMLHeader()
+			_, err = writer.WriteString(content)
+			if err != nil {
+				return err
+			}
+		} else {
+			_, err = io.Copy(writer, reader)
+		}
 		return err
 	})
 }

@@ -41,24 +41,26 @@ func LoadConfigFile(reader io.Reader) (*Config, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if c.Title == "" {
-		c.Title = defaultConfig.Title
-	}
-	if c.Theme == "" {
-		c.Theme = defaultConfig.Theme
-	}
-	if c.BuildDirectory == "" {
-		c.BuildDirectory = defaultConfig.BuildDirectory
-	}
-	if c.InternalPlugins == nil {
-		c.InternalPlugins = defaultConfig.InternalPlugins
-	}
-	mergedRevealJS := defaultConfig.RevealJS
-	for k, v := range c.RevealJS {
-		mergedRevealJS[k] = v
-	}
-	c.RevealJS = mergedRevealJS
+	defaultConfig.OverrideWith(c)
 	return c, nil
+}
+
+func (c *Config) OverrideWith(other *Config) {
+	if other.Title != "" {
+		c.Title = other.Title
+	}
+	if other.Theme != "" {
+		c.Theme = other.Theme
+	}
+	if other.BuildDirectory != "" {
+		c.BuildDirectory = other.BuildDirectory
+	}
+	if other.InternalPlugins != nil {
+		c.InternalPlugins = other.InternalPlugins
+	}
+	for k, v := range other.RevealJS {
+		c.RevealJS[k] = v
+	}
 }
 
 func doLoadConfigFile(reader io.Reader) (*Config, error) {

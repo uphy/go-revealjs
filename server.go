@@ -3,8 +3,10 @@ package revealjs
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -48,6 +50,25 @@ func (s *Server) Start() error {
 				return
 			}
 
+			// If the file is markdown, remove the yaml header.
+			if IsMarkdown(req.URL.Path) {
+				file, err := s.revealJS.FileSystem().Open(req.URL.Path[1:]) // remove '/'
+				if err != nil {
+					log.Println(err)
+					http.Error(w, "failed to open file", http.StatusInternalServerError)
+					return
+				}
+				defer file.Close()
+				b, err := io.ReadAll(file)
+				if err != nil {
+					http.Error(w, "failed to read file", http.StatusInternalServerError)
+				}
+				content := NewMarkdown(string(b)).WithoutYAMLHeader()
+				http.ServeContent(w, req, req.URL.Path, time.Now(), strings.NewReader(content))
+				return
+			}
+
+			// Other files
 			http.ServeFileFS(w, req, s.revealJS.FileSystem(), req.URL.Path)
 		})
 		log.Printf("Start server on http://localhost:%d", s.port)
