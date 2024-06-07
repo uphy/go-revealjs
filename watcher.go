@@ -12,6 +12,7 @@ import (
 type Watcher struct {
 	watcher       *fsnotify.Watcher
 	dataDirectory string
+	onUpdate      func()
 	Revision      *Revision
 }
 
@@ -23,14 +24,14 @@ func (r *Revision) update() {
 	r.Value = time.Now().String()
 }
 
-func NewWatcher(dataDirectory string) (*Watcher, error) {
+func NewWatcher(dataDirectory string, onUpdate func()) (*Watcher, error) {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
 	}
 	rev := &Revision{}
 	rev.update()
-	return &Watcher{w, dataDirectory, rev}, err
+	return &Watcher{w, dataDirectory, onUpdate, rev}, err
 }
 
 func (w *Watcher) Start() {
@@ -59,5 +60,6 @@ func (w *Watcher) Start() {
 
 func (w *Watcher) notifyUpdate() {
 	log.Println("Data directory updated.")
+	w.onUpdate()
 	w.Revision.update()
 }

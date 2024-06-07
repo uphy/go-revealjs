@@ -18,7 +18,10 @@ func NewServer(port int, revealJS *RevealJS) *Server {
 }
 
 func (s *Server) Start() error {
-	watcher, err := NewWatcher(s.revealJS.DataDirectory())
+	watcher, err := NewWatcher(s.revealJS.DataDirectory(), func() {
+		// User may change config.yml. Reload it.
+		s.revealJS.ReloadConfig()
+	})
 	if err != nil {
 		return err
 	}
@@ -32,11 +35,6 @@ func (s *Server) Start() error {
 		http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 			// Is index.html
 			if req.URL.Path == "/" {
-				// User may change config.yml. Reload it.
-				if err := s.revealJS.ReloadConfig(); err != nil {
-					http.Error(w, "failed to reload config.yml", http.StatusInternalServerError)
-					return
-				}
 				// Generate index.html
 				buf := &bytes.Buffer{}
 				if err := s.revealJS.GenerateIndexHTML(buf, &HTMLGeneratorParams{
