@@ -18,10 +18,6 @@ func NewServer(port int, revealJS *RevealJS) *Server {
 }
 
 func (s *Server) Start() error {
-	if err := s.revealJS.ReloadConfig(); err != nil {
-		return err
-	}
-
 	watcher, err := NewWatcher(s.revealJS)
 	if err != nil {
 		return err

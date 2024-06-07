@@ -32,7 +32,11 @@ func NewRevealJS(dataDirectory string) (*RevealJS, error) {
 		return nil, errors.New("`dir` not exist")
 	}
 	mfs := vfs.NewMergeFS(os.DirFS(absDataDir), indexHTMLTmplFS(), configYamlFS(), revealjsFS())
-	return &RevealJS{nil, absDataDir, true, false, mfs}, nil
+	revealJS := &RevealJS{nil, absDataDir, true, false, mfs}
+	if err := revealJS.ReloadConfig(); err != nil {
+		return nil, err
+	}
+	return revealJS, nil
 }
 
 func (r *RevealJS) ReloadConfig() error {
@@ -167,13 +171,7 @@ func (r *RevealJS) FileSystem() fs.FS {
 }
 
 func (r *RevealJS) Build() error {
-	if err := r.ReloadConfig(); err != nil {
-		return err
-	}
 	dst := r.BuildDirectory()
-	if err := r.ReloadConfig(); err != nil {
-		return err
-	}
 
 	// Make 'build' directory if not exist
 	if err := os.MkdirAll(dst, 0700); err != nil {
