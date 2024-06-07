@@ -18,7 +18,7 @@ func NewServer(port int, revealJS *RevealJS) *Server {
 }
 
 func (s *Server) Start() error {
-	watcher, err := NewWatcher(s.revealJS)
+	watcher, err := NewWatcher(s.revealJS.DataDirectory())
 	if err != nil {
 		return err
 	}

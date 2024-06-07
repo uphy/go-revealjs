@@ -10,9 +10,9 @@ import (
 )
 
 type Watcher struct {
-	watcher  *fsnotify.Watcher
-	revealjs *RevealJS
-	Revision *Revision
+	watcher       *fsnotify.Watcher
+	dataDirectory string
+	Revision      *Revision
 }
 
 type Revision struct {
@@ -23,19 +23,19 @@ func (r *Revision) update() {
 	r.Value = time.Now().String()
 }
 
-func NewWatcher(revealjs *RevealJS) (*Watcher, error) {
+func NewWatcher(dataDirectory string) (*Watcher, error) {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
 	}
 	rev := &Revision{}
 	rev.update()
-	return &Watcher{w, revealjs, rev}, err
+	return &Watcher{w, dataDirectory, rev}, err
 }
 
 func (w *Watcher) Start() {
-	w.watcher.Add(w.revealjs.dataDirectory)
-	filepath.Walk(w.revealjs.dataDirectory, func(path string, info os.FileInfo, err error) error {
+	w.watcher.Add(w.dataDirectory)
+	filepath.Walk(w.dataDirectory, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			w.watcher.Add(path)
 		}
