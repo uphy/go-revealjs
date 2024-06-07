@@ -25,8 +25,8 @@ func (m *Markdown) WithoutYAMLHeader() string {
 	return yamlHeaderRegexp.ReplaceAllString(m.content, "")
 }
 
-func (m *Markdown) YAMLHeader() (map[string]string, error) {
-	header := make(map[string]string)
+func (m *Markdown) YAMLHeader() (map[string]interface{}, error) {
+	header := make(map[string]interface{})
 	matches := yamlHeaderRegexp.FindStringSubmatch(m.content)
 	if len(matches) == 2 {
 		if err := yaml.Unmarshal([]byte(matches[1]), &header); err != nil {

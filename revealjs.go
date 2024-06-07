@@ -55,8 +55,15 @@ func (r *RevealJS) ReloadConfig() error {
 	if files, collectErr := r.collectSlideSourceFiles(); collectErr != nil {
 		return collectErr
 	} else {
-		if len(files) == 1 && IsMarkdown(files[0]) {
-			b, err := fs.ReadFile(r.fs, files[0])
+		mdFiles := make([]string, 0)
+		for _, file := range files {
+			if IsMarkdown(file) {
+				mdFiles = append(mdFiles, file)
+			}
+		}
+
+		if len(mdFiles) == 1 && IsMarkdown(mdFiles[0]) {
+			b, err := fs.ReadFile(r.fs, mdFiles[0])
 			if err != nil {
 				return err
 			}
