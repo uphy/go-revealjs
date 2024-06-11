@@ -31,7 +31,7 @@ func LoadConfigFile(reader io.Reader) (*Config, error) {
 	}
 
 	// Derive from default config
-	defaultConfigFile, err := configYamlFS().Open("config.yml")
+	defaultConfigFile, err := defaultConfigYAML()
 	if err != nil {
 		log.Fatal(err)
 	}

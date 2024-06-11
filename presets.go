@@ -31,7 +31,7 @@ func NewPreset(name string) (*Preset, error) {
 	if err != nil {
 		return nil, err
 	}
-	mfs := vfs.NewMergeFS(preset, indexHTMLTmplFS(), configYamlFS())
+	mfs := vfs.NewMergeFS(preset, defaultFS())
 	return &Preset{mfs}, nil
 }
 

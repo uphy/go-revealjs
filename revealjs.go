@@ -33,7 +33,7 @@ func NewRevealJS(dataDirectory string) (*RevealJS, error) {
 		return nil, errors.New("`dir` not exist")
 	}
 	userFS := NewSlideResourceFS(os.DirFS(absDataDir))
-	systemFS := vfs.NewMergeFS(indexHTMLTmplFS(), configYamlFS(), revealjsFS())
+	systemFS := vfs.NewMergeFS(defaultFS(), revealjsFS())
 	mfs := vfs.NewMergeFS(userFS, systemFS)
 	revealJS := &RevealJS{nil, absDataDir, true, false, mfs, userFS}
 	if err := revealJS.ReloadConfig(); err != nil {
