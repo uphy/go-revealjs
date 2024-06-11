@@ -1,7 +1,6 @@
 package revealjs
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"html"
@@ -13,7 +12,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/ghodss/yaml"
 	"github.com/uphy/go-revealjs/vfs"
 )
 
@@ -64,20 +62,11 @@ func (r *RevealJS) ReloadConfig() error {
 				if err != nil {
 					return err
 				}
-				md := NewMarkdown(string(b))
-				if header, err := md.YAMLHeader(); err != nil {
+				configInMd, err := LoadConfigFromMarkdown(string(b))
+				if err != nil {
 					return err
-				} else {
-					b, err := yaml.Marshal(header)
-					if err != nil {
-						return err
-					}
-					configInMd, err := doLoadConfigFile(bytes.NewReader(b))
-					if err != nil {
-						return err
-					}
-					c.OverrideWith(configInMd)
 				}
+				c.OverrideWith(configInMd)
 			}
 		}
 	}

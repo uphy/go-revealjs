@@ -3,7 +3,7 @@ package revealjs
 import (
 	"regexp"
 
-	"github.com/ghodss/yaml"
+	"gopkg.in/yaml.v3"
 )
 
 var yamlHeaderRegexp = regexp.MustCompile(`(?s)^---\n(.*?)\n---\n+`)

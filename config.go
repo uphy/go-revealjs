@@ -1,26 +1,27 @@
 package revealjs
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"strings"
 
-	"github.com/ghodss/yaml"
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	Slides          []string               `json:"slides"`
-	Title           string                 `json:"title"`
-	Theme           string                 `json:"theme"`
-	RevealJS        map[string]interface{} `json:"revealjs"`
-	InternalPlugins []interface{}          `json:"plugins"`
+	Slides          []string               `yaml:"slides"`
+	Title           string                 `yaml:"title"`
+	Theme           string                 `yaml:"theme"`
+	RevealJS        map[string]interface{} `yaml:"revealjs"`
+	InternalPlugins []interface{}          `yaml:"plugins"`
 }
 
 type Plugin struct {
-	Name string `json:"name"`
-	Src  string `json:"src"`
+	Name string `yaml:"name"`
+	Src  string `yaml:"src"`
 }
 
 func LoadConfigFile(reader io.Reader) (*Config, error) {
@@ -40,6 +41,19 @@ func LoadConfigFile(reader io.Reader) (*Config, error) {
 	}
 	defaultConfig.OverrideWith(c)
 	return c, nil
+}
+
+func LoadConfigFromMarkdown(content string) (*Config, error) {
+	md := NewMarkdown(content)
+	if header, err := md.YAMLHeader(); err != nil {
+		return nil, err
+	} else {
+		b, err := yaml.Marshal(header)
+		if err != nil {
+			return nil, err
+		}
+		return doLoadConfigFile(bytes.NewReader(b))
+	}
 }
 
 func (c *Config) OverrideWith(other *Config) {
