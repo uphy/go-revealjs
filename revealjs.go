@@ -257,7 +257,13 @@ func extractFile(fileSystem fs.FS, src, dst string, skip func(path string) bool)
 		relPath, _ := filepath.Rel(src, path)
 		copyDst := filepath.Join(dst, relPath)
 		if d.IsDir() {
-			return os.MkdirAll(copyDst, 0700)
+			return nil
+		}
+		parentDir := filepath.Dir(copyDst)
+		if !exist(parentDir) {
+			if err := os.MkdirAll(parentDir, 0700); err != nil {
+				return err
+			}
 		}
 
 		var reader io.ReadCloser
