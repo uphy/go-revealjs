@@ -39,7 +39,7 @@ func LoadConfigFile(reader io.Reader) (*Config, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defaultConfig.OverrideWith(c)
+	c.OverrideWith(defaultConfig)
 	return c, nil
 }
 
@@ -65,6 +65,9 @@ func (c *Config) OverrideWith(other *Config) {
 	}
 	if other.InternalPlugins != nil {
 		c.InternalPlugins = other.InternalPlugins
+	}
+	if c.RevealJS == nil {
+		c.RevealJS = map[string]interface{}{}
 	}
 	for k, v := range other.RevealJS {
 		c.RevealJS[k] = v
