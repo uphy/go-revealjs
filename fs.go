@@ -36,7 +36,8 @@ func (s *SlideResourceFS) Open(name string) (fs.File, error) {
 	}
 
 	dir, file := filepath.Split(name)
-	if dir == "" || dir == DirNameSlides {
+	dir = filepath.ToSlash(dir)
+	if dir == "" || dir == DirNameSlides+"/" {
 		if IsMarkdown(file) || IsHTML(file) {
 			return s.fs.Open(name)
 		}
