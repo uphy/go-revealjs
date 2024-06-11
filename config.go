@@ -3,10 +3,10 @@ package revealjs
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -25,7 +25,7 @@ type Plugin struct {
 }
 
 func LoadConfigFile(reader io.Reader) (*Config, error) {
-	c, err := doLoadConfigFile(reader)
+	loadedConfig, err := doLoadConfigFile(reader)
 	if err != nil {
 		return nil, err
 	}
@@ -35,12 +35,12 @@ func LoadConfigFile(reader io.Reader) (*Config, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defaultConfig, err := doLoadConfigFile(defaultConfigFile)
+	cfg, err := doLoadConfigFile(defaultConfigFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	c.OverrideWith(defaultConfig)
-	return c, nil
+	cfg.OverrideWith(loadedConfig)
+	return cfg, nil
 }
 
 func LoadConfigFromMarkdown(content string) (*Config, error) {
@@ -123,35 +123,30 @@ func (c *Config) Plugins() []Plugin {
 	return plugins
 }
 
-func (c *Config) RevealJSConfig() map[string]string {
+func (c *Config) RevealJSConfig() (map[string]string, error) {
 	m := map[string]string{}
 
 	// config from file
 	for k, v := range c.RevealJS {
-		m[k] = c.valueToString(k, v)
+		s, err := c.valueToString(k, v)
+		if err != nil {
+			return nil, fmt.Errorf("error in config '%s': %v", k, err)
+		}
+		m[k] = s
 	}
-	return m
+	return m, nil
 }
 
-func (c *Config) valueToString(k string, v interface{}) string {
-	switch k {
-	case "controlsLayout", "controlsBackArrows", "transition", "transitionSpeed", "backgroundTransition", "parallaxBackgroundImage", "parallaxBackgroundSize", "display", "showSlideNumber", "parallaxBackgroundPosition", "parallaxBackgroundRepeat", "autoAnimateMatcher", "navigationMode", "preloadIframes", "autoAnimateEasing":
-		if v == nil {
-			return "null"
+func (c *Config) valueToString(k string, v interface{}) (string, error) {
+	if p := configProperty(k); p != nil {
+		s, err := p.ToString(v)
+		if err != nil {
+			return "", err
 		}
-		return fmt.Sprintf(`'%v'`, v)
-	case "autoPlayMedia", "autoSlideMethod", "defaultTiming", "parallaxBackgroundHorizontal", "parallaxBackgroundVertical", "keyboardCondition":
-		if v == nil {
-			return "null"
-		}
-		return fmt.Sprint(v)
-	case "autoAnimateStyles":
-		b, _ := json.Marshal(v)
-		return string(b)
-	case "plugins":
-		b, _ := json.Marshal(v)
-		return strings.ReplaceAll(string(b), `"`, ``)
-	default:
-		return fmt.Sprint(v)
+		return s, nil
 	}
+	if k == "plugins" {
+		return "", errors.New("'revealjs.plugins' is not supported, use 'plugins' instead")
+	}
+	return fmt.Sprint(v), nil
 }

@@ -42,6 +42,7 @@ func (s *Server) Start() error {
 					HotReload: true,
 					Revision:  &watcher.Revision.Value,
 				}); err != nil {
+					log.Println(err)
 					http.Error(w, "failed to generate index.html", http.StatusInternalServerError)
 					return
 				}
