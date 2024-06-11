@@ -1,7 +1,6 @@
 package revealjs
 
 import (
-	"path/filepath"
 	"regexp"
 
 	"github.com/ghodss/yaml"
@@ -11,10 +10,6 @@ var yamlHeaderRegexp = regexp.MustCompile(`(?s)^---\n(.*?)\n---\n+`)
 
 type Markdown struct {
 	content string
-}
-
-func IsMarkdown(path string) bool {
-	return filepath.Ext(path) == ".md"
 }
 
 func NewMarkdown(content string) *Markdown {

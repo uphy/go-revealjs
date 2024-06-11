@@ -23,6 +23,7 @@ type RevealJS struct {
 	EmbedHTML     bool
 	EmbedMarkdown bool
 	fs            fs.FS
+	userFS        fs.FS
 }
 
 func NewRevealJS(dataDirectory string) (*RevealJS, error) {
@@ -33,8 +34,10 @@ func NewRevealJS(dataDirectory string) (*RevealJS, error) {
 	if !exist(absDataDir) {
 		return nil, errors.New("`dir` not exist")
 	}
-	mfs := vfs.NewMergeFS(os.DirFS(absDataDir), indexHTMLTmplFS(), configYamlFS(), revealjsFS())
-	revealJS := &RevealJS{nil, absDataDir, true, false, mfs}
+	userFS := NewSlideResourceFS(os.DirFS(absDataDir))
+	systemFS := vfs.NewMergeFS(indexHTMLTmplFS(), configYamlFS(), revealjsFS())
+	mfs := vfs.NewMergeFS(userFS, systemFS)
+	revealJS := &RevealJS{nil, absDataDir, true, false, mfs, userFS}
 	if err := revealJS.ReloadConfig(); err != nil {
 		return nil, err
 	}
@@ -42,7 +45,7 @@ func NewRevealJS(dataDirectory string) (*RevealJS, error) {
 }
 
 func (r *RevealJS) ReloadConfig() error {
-	configFile, err := r.fs.Open("config.yml")
+	configFile, err := r.fs.Open(FileNameConfig)
 	if err != nil {
 		return err
 	}
@@ -93,11 +96,11 @@ type HTMLGeneratorParams struct {
 }
 
 func (r *RevealJS) GenerateIndexHTML(w io.Writer, params *HTMLGeneratorParams) error {
-	b, err := fs.ReadFile(r.fs, "index.html.tmpl")
+	b, err := fs.ReadFile(r.fs, FileNameIndexHTMLTmpl)
 	if err != nil {
 		return err
 	}
-	tmpl, err := template.New("index.html.tmpl").Parse(string(b))
+	tmpl, err := template.New(FileNameIndexHTMLTmpl).Parse(string(b))
 	if err != nil {
 		return err
 	}
@@ -150,25 +153,16 @@ func (r *RevealJS) collectSlideSourceFiles() ([]string, error) {
 		return r.config.Slides, nil
 	}
 
-	buildDir := r.BuildDirectory()
 	files := make([]string, 0)
-	if err := filepath.Walk(r.dataDirectory, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
+	fs.WalkDir(r.userFS, ".", func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
 			return nil
 		}
-		if strings.HasPrefix(path, buildDir) {
-			return nil
+		if IsHTML(path) || IsMarkdown(path) {
+			files = append(files, path)
 		}
-
-		p, _ := filepath.Rel(r.dataDirectory, path)
-		if p == "config.yml" || p == ".DS_Store" {
-			return nil
-		}
-		files = append(files, p)
 		return nil
-	}); err != nil {
-		return nil, fmt.Errorf("failed to scan slide source files: %w", err)
-	}
+	})
 	return files, nil
 }
 
@@ -188,8 +182,7 @@ func (r *RevealJS) doGenerateSections(files []string) []string {
 func (r *RevealJS) sectionFor(relPathFromDataDirectory string) (string, error) {
 	path := filepath.Join(r.dataDirectory, relPathFromDataDirectory)
 
-	switch filepath.Ext(path) {
-	case ".html":
+	if IsHTML(path) {
 		if r.EmbedHTML {
 			content, err := os.ReadFile(path)
 			if err != nil {
@@ -198,7 +191,7 @@ func (r *RevealJS) sectionFor(relPathFromDataDirectory string) (string, error) {
 			return string(content), nil
 		}
 		return fmt.Sprintf(`<section data-external="%s"></section>`, relPathFromDataDirectory), nil
-	case ".md":
+	} else if IsMarkdown(path) {
 		if r.EmbedMarkdown {
 			b, err := os.ReadFile(path)
 			if err != nil {
@@ -208,7 +201,7 @@ func (r *RevealJS) sectionFor(relPathFromDataDirectory string) (string, error) {
 			return fmt.Sprintf(`<section data-markdown data-separator="^\r?\n---\r?\n$" data-separator-vertical="^\r?\n~~~\r?\n$">%s</section>`, html.EscapeString(md)), nil
 		}
 		return fmt.Sprintf(`<section data-markdown="%s" data-separator="^\r?\n---\r?\n$" data-separator-vertical="^\r?\n~~~\r?\n$"></section>`, relPathFromDataDirectory), nil
-	default:
+	} else {
 		return "", fmt.Errorf("unsupported slide file: %s", path)
 	}
 }
@@ -244,7 +237,7 @@ func (r *RevealJS) Build() error {
 	}
 
 	// generate index.html
-	f, err := os.Create(filepath.Join(dst, "index.html"))
+	f, err := os.Create(filepath.Join(dst, FileNameIndexHTML))
 	if err != nil {
 		return err
 	}
@@ -266,7 +259,15 @@ func (r *RevealJS) Build() error {
 
 		// Skip index.html.tmpl and config.yml
 		filename := filepath.Base(path)
-		if filename == "index.html.tmpl" || filename == "config.yml" {
+		if filename == FileNameIndexHTMLTmpl || filename == FileNameConfig {
+			return true
+		}
+
+		// Skip embedded html/md files
+		if r.EmbedHTML && IsHTML(filename) {
+			return true
+		}
+		if r.EmbedMarkdown && IsMarkdown(filename) {
 			return true
 		}
 
