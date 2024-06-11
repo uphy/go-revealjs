@@ -210,17 +210,11 @@ func (r *RevealJS) DataDirectory() string {
 	return r.dataDirectory
 }
 
-func (r *RevealJS) BuildDirectory() string {
-	return filepath.Join(r.dataDirectory, r.config.BuildDirectory)
-}
-
 func (r *RevealJS) FileSystem() fs.FS {
 	return r.fs
 }
 
-func (r *RevealJS) Build() error {
-	dst := r.BuildDirectory()
-
+func (r *RevealJS) Build(dst string) error {
 	// Make 'build' directory if not exist
 	if err := os.MkdirAll(dst, 0700); err != nil {
 		return err

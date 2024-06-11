@@ -27,7 +27,6 @@ func (s *Server) Start() error {
 	if err != nil {
 		return err
 	}
-	// TODO 終了処理いらないっけ？
 	go func() {
 		http.HandleFunc("/revision", func(w http.ResponseWriter, req *http.Request) {
 			w.Header().Set("Content-Type", "text/plain")

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
-	"regexp"
 	"strings"
 
 	"github.com/ghodss/yaml"
@@ -16,7 +14,6 @@ type Config struct {
 	Slides          []string               `json:"slides"`
 	Title           string                 `json:"title"`
 	Theme           string                 `json:"theme"`
-	BuildDirectory  string                 `json:"buildDir"`
 	RevealJS        map[string]interface{} `json:"revealjs"`
 	InternalPlugins []interface{}          `json:"plugins"`
 }
@@ -51,9 +48,6 @@ func (c *Config) OverrideWith(other *Config) {
 	}
 	if other.Theme != "" {
 		c.Theme = other.Theme
-	}
-	if other.BuildDirectory != "" {
-		c.BuildDirectory = other.BuildDirectory
 	}
 	if other.InternalPlugins != nil {
 		c.InternalPlugins = other.InternalPlugins
@@ -115,15 +109,6 @@ func (c *Config) Plugins() []Plugin {
 func (c *Config) RevealJSConfig() map[string]string {
 	m := map[string]string{}
 
-	// config from env
-	p := regexp.MustCompile(`REVEALJS_(.*?)=(.*)`)
-	for _, env := range os.Environ() {
-		if match := p.FindStringSubmatch(env); len(match) > 0 {
-			key := match[1]
-			value := match[2]
-			m[key] = c.valueToString(key, value)
-		}
-	}
 	// config from file
 	for k, v := range c.RevealJS {
 		m[k] = c.valueToString(k, v)

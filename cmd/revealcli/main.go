@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -98,12 +99,31 @@ func main() {
 			},
 		},
 		{
-			Name:  "build",
+			Name:  "export",
 			Usage: "Generate static slide files",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "output,o",
+					Value: "build",
+				},
+				cli.StringFlag{
+					Name:  "format,f",
+					Value: "html",
+				},
+			},
 			Action: func(ctx *cli.Context) error {
 				revealJS.EmbedHTML = true
 				revealJS.EmbedMarkdown = true
-				return revealJS.Build()
+				output, err := filepath.Abs(ctx.String("output"))
+				if err != nil {
+					return err
+				}
+				format := ctx.String("format")
+				if format != "html" {
+					// currently only html is supported
+					return fmt.Errorf("unsupported format: %s", format)
+				}
+				return revealJS.Build(output)
 			},
 		},
 	}
