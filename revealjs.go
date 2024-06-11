@@ -58,32 +58,26 @@ func (r *RevealJS) ReloadConfig() error {
 	if files, collectErr := r.collectSlideSourceFiles(); collectErr != nil {
 		return collectErr
 	} else {
-		mdFiles := make([]string, 0)
 		for _, file := range files {
 			if IsMarkdown(file) {
-				mdFiles = append(mdFiles, file)
-			}
-		}
-
-		if len(mdFiles) == 1 && IsMarkdown(mdFiles[0]) {
-			b, err := fs.ReadFile(r.fs, mdFiles[0])
-			if err != nil {
-				return err
-			}
-			md := NewMarkdown(string(b))
-			if header, err := md.YAMLHeader(); err != nil {
-				return err
-			} else {
-				b, err := yaml.Marshal(header)
+				b, err := fs.ReadFile(r.fs, file)
 				if err != nil {
 					return err
 				}
-				configInMd, err := doLoadConfigFile(bytes.NewReader(b))
-				if err != nil {
+				md := NewMarkdown(string(b))
+				if header, err := md.YAMLHeader(); err != nil {
 					return err
+				} else {
+					b, err := yaml.Marshal(header)
+					if err != nil {
+						return err
+					}
+					configInMd, err := doLoadConfigFile(bytes.NewReader(b))
+					if err != nil {
+						return err
+					}
+					c.OverrideWith(configInMd)
 				}
-				c.OverrideWith(configInMd)
-				return nil
 			}
 		}
 	}
