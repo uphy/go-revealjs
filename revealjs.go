@@ -219,16 +219,6 @@ func (r *RevealJS) Build(dst string) error {
 	if err := os.MkdirAll(dst, 0700); err != nil {
 		return err
 	}
-	// clean
-	files, err := os.ReadDir(dst)
-	if err != nil {
-		return err
-	}
-	for _, f := range files {
-		if err := os.RemoveAll(filepath.Join(dst, f.Name())); err != nil {
-			return err
-		}
-	}
 
 	// generate index.html
 	f, err := os.Create(filepath.Join(dst, FileNameIndexHTML))

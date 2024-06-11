@@ -8,6 +8,7 @@ start:
 
 .PHONY: build
 build:
+	@rm -rf data/build
 	@cd cmd/revealcli && go run main.go --dir ../../data export --output ../../data/build
 
 .PHONY: install
