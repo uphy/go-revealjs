@@ -10,7 +10,7 @@ import (
 	"syscall"
 
 	"github.com/uphy/go-revealjs"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var version string = "dev"
@@ -21,10 +21,11 @@ func main() {
 	app.Usage = "presentation slide generator using reveal.js"
 	app.Description = "revealcli is a cli tool to generate the presentation slide using reveal.js."
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "dir,d",
-			Value: ".",
-			Usage: "path to the slide data directory",
+		&cli.StringFlag{
+			Name:    "dir",
+			Aliases: []string{"d"},
+			Value:   ".",
+			Usage:   "path to the slide data directory",
 		},
 	}
 
@@ -41,19 +42,22 @@ func main() {
 		}
 		return nil
 	}
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		{
 			Name:  "init",
 			Usage: "Generate config file and slide files",
 			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name: "overwrite,o",
+				&cli.BoolFlag{
+					Name:    "overwrite",
+					Aliases: []string{"o"},
 				},
-				cli.BoolFlag{
-					Name: "config,c",
+				&cli.BoolFlag{
+					Name:    "config",
+					Aliases: []string{"c"},
 				},
-				cli.BoolFlag{
-					Name: "html,t",
+				&cli.BoolFlag{
+					Name:    "html",
+					Aliases: []string{"t"},
 				},
 			},
 			ArgsUsage: fmt.Sprintf("[%s]", strings.Join(revealjs.PresetNames, "|")),
@@ -79,18 +83,21 @@ func main() {
 			Name:  "start",
 			Usage: "Start reveal.js server",
 			Flags: []cli.Flag{
-				cli.IntFlag{
-					Name:  "port,p",
-					Value: 8080,
+				&cli.IntFlag{
+					Name:    "port",
+					Aliases: []string{"p"},
+					Value:   8080,
 				},
-				cli.BoolTFlag{
-					Name:  "open,o",
-					Usage: "open browser",
+				&cli.BoolFlag{
+					Name:    "open",
+					Aliases: []string{"o"},
+					Usage:   "open browser",
+					Value:   true,
 				},
 			},
 			Action: func(ctx *cli.Context) error {
 				port := ctx.Int("port")
-				open := ctx.BoolT("open")
+				open := ctx.Bool("open")
 				server := revealjs.NewServer(port, revealJS)
 				if err := server.Start(); err != nil {
 					return fmt.Errorf("failed to start server: %s", err)
@@ -110,13 +117,15 @@ func main() {
 			Name:  "export",
 			Usage: "Generate static slide files",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "output,o",
-					Value: "build",
+				&cli.StringFlag{
+					Name:    "output",
+					Aliases: []string{"o"},
+					Value:   "build",
 				},
-				cli.StringFlag{
-					Name:  "format,f",
-					Value: "html",
+				&cli.StringFlag{
+					Name:    "format",
+					Aliases: []string{"f"},
+					Value:   "html",
 				},
 			},
 			Action: func(ctx *cli.Context) error {
