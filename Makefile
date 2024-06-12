@@ -11,6 +11,10 @@ build:
 	@rm -rf data/build
 	@cd cmd/revealcli && go run main.go --dir ../../data export --output ../../data/build
 
+.PHONY: test
+test:
+	@go test -v ./...
+
 .PHONY: install
 install:
 	@cd cmd/revealcli && go install

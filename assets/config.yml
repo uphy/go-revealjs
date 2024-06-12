@@ -23,8 +23,6 @@ plugins:
   - RevealNotes
   - RevealMath
   - RevealZoom
-  - name: RevealPlantUML
-    src: https://cdn.jsdelivr.net/gh/uphy/revealjs-plantuml@0.0.2/dist/plantuml.js
 
 revealjs:
   # Display presentation control arrows

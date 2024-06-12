@@ -13,7 +13,7 @@ var _initFS embed.FS
 //go:embed assets/index.html.tmpl assets/config.yml
 var _defaultFS embed.FS
 
-//go:embed assets/reveal.js/css assets/reveal.js/dist assets/reveal.js/plugin
+//go:embed assets/reveal.js/dist assets/reveal.js/plugin
 var _revealjsFS embed.FS
 
 var PresetNames = []string{"default", "demo"}
