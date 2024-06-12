@@ -28,6 +28,7 @@ func main() {
 			Usage:   "path to the slide data directory",
 		},
 	}
+	app.DefaultCommand = "start"
 
 	var revealJS *revealjs.RevealJS
 	app.Before = func(ctx *cli.Context) error {
