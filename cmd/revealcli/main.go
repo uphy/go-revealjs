@@ -83,12 +83,20 @@ func main() {
 					Name:  "port,p",
 					Value: 8080,
 				},
+				cli.BoolTFlag{
+					Name:  "open,o",
+					Usage: "open browser",
+				},
 			},
 			Action: func(ctx *cli.Context) error {
 				port := ctx.Int("port")
+				open := ctx.BoolT("open")
 				server := revealjs.NewServer(port, revealJS)
 				if err := server.Start(); err != nil {
 					return fmt.Errorf("failed to start server: %s", err)
+				}
+				if open {
+					OpenBrowser(fmt.Sprintf("http://localhost:%d", port))
 				}
 
 				signalc := make(chan os.Signal, 1)
