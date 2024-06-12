@@ -1,0 +1,34 @@
+name: Setup revealcli
+description: Setup revealcli
+
+inputs:
+  version:
+    description: 'The version of the revealcli to use (latest/vX.Y.Z)'
+    required: false
+    default: 'latest'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup revealcli
+      shell: bash
+      run: |
+        filename=revealcli-linux-amd64.tar.gz
+        if [ "$VERSION" = "latest"]; then
+          url=https://github.com/uphy/go-revealjs/releases/latest/download/$filename
+        else
+          url=https://github.com/uphy/go-revealjs/releases/download/v0.0.6/$filename
+        fi
+        
+        dir=$(mktemp -d)
+        cd $dir
+        curl -L -o revealcli.tar.gz $url
+        tar xzf revealcli.tar.gz
+        cd revealcli-linux-amd64
+        chmod +x revealcli
+        mkdir -p ${{ github.workspace}}/bin
+        mv revealcli ${{ github.workspace}}/bin/revealcli
+
+        echo ${{ github.workspace }}/bin >> $GITHUB_PATH
+      env:
+        VERSION: ${{ inputs.version }}

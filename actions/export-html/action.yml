@@ -1,0 +1,27 @@
+name: Export presentation to HTML
+description: Export presentation to HTML
+
+inputs:
+  input-directory:
+    description: 'The directory where the presentation source files are located'
+    required: true
+  output-directory:
+    description: 'The directory where the HTML presentation will be exported'
+    required: true
+  version:
+    description: 'The version of the revealcli to use (latest/vX.Y.Z)'
+    required: false
+    default: 'latest'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup revealcli
+      uses: uphy/go-revealjs/actions/setup-revealcli@main
+      with:
+        version: ${{ inputs.version }}
+    
+    - name: Export presentation to HTML
+      shell: bash
+      run: |
+        revealcli --dir ${{ inputs.input-directory }} export --output ${{ inputs.output-directory }}

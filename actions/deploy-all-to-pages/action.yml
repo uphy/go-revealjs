@@ -1,0 +1,56 @@
+name: Deploy all slide directories to GitHub Pages
+description: Deploy all slide directories to GitHub Pages
+
+inputs:
+  input-directory:
+    description: 'The directory where the slide directories are located'
+    required: false
+    default: 'slides'
+  version:
+    description: 'The version of the revealcli to use (latest/vX.Y.Z)'
+    required: false
+    default: 'latest'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup revealcli
+      uses: uphy/go-revealjs/actions/setup-revealcli@main
+
+    - name: Build pages
+      shell: bash
+      run: |
+        destDir=docs
+        mkdir -p $destDir
+        find "$INPUT_DIRECTORY" -type d -mindepth 1 -maxdepth 1 | while read -r dir; do
+          revealcli -d $dir export -o $destDir/$(basename $dir)
+        done
+
+        function generateIndex() {
+          echo '<!DOCTYPE html>'
+          echo '<html>'
+          echo '<head>'
+          echo '  <title>Slides</title>'
+          echo '</head>'
+          echo '<body>'
+          echo '  <h1>Slides</h1>'
+          echo '  <ul>'
+          find $destDir -type d -mindepth 1 -maxdepth 1 | while read -r dir; do
+            echo "    <li><a href=\"$(basename $dir)/index.html\">$(basename $dir)</a></li>"
+          done
+          echo '  </ul>'
+          echo '</body>'
+          echo '</html>'
+        }
+
+        generateIndex > $destDir/index.html
+      env:
+        INPUT_DIRECTORY: ${{ inputs.input-directory }}
+    
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs
+
+    - name: Deploy to GitHub Pages
+      uses: actions/deploy-pages@v4
