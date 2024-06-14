@@ -3,7 +3,7 @@ project_name: revealcli
 builds:
   - id: default
     binary: revealcli
-    main: cmd/revealcli/main.go
+    main: ./cmd/revealcli/
     ldflags:
       - -X main.version={{.Version}}
     goos:
