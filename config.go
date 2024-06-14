@@ -148,5 +148,13 @@ func (c *Config) valueToString(k string, v interface{}) (string, error) {
 	if k == "plugins" {
 		return "", errors.New("'revealjs.plugins' is not supported, use 'plugins' instead")
 	}
+
+	// if v is a map or slice, convert it to json string
+	switch v.(type) {
+	case map[string]interface{}, []interface{}:
+		b, err := json.Marshal(v)
+		return string(b), err
+	}
+
 	return fmt.Sprint(v), nil
 }
